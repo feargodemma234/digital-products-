@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QKJ Digital Store - Pay with USDT</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body { font-family: 'Segoe UI', Arial, sans-serif; background:#0f172a; color:#fff; padding:20px; }
+  h1 { text-align:center; color:#22c55e; margin-bottom:5px; }
+.subtitle { text-align:center; color:#94a3b8; margin-bottom:20px; }
+ 
+ /* NEW SEARCH BAR */
+.search-box { max-width:600px; margin:0 auto 30px; }
+.search-box input { width:100%; padding:14px 18px; border-radius:12px; border:2px solid #334155; background:#1e293b; color:#fff; font-size:16px; outline:none; }
+.search-box input:focus { border-color:#22c55e; }
+
+.products { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px; max-width:1200px; margin:0 auto; }
+.card { background:#1e293b; border-radius:16px; padding:16px; border:1px solid #334155; transition:0.3s; }
+.card:hover { transform:translateY(-5px); border-color:#22c55e; }
+.card img { width:100%; height:220px; object-fit:cover; border-radius:12px; margin-bottom:12px; }
+.card h3 { font-size:18px; margin-bottom:8px; }
+.card p { font-size:14px; color:#cbd5e1; margin-bottom:12px; min-height:60px; }
+.price { font-size:24px; color:#22c55e; font-weight:bold; margin-bottom:12px; }
+.btn { background:#22c55e; color:#000; padding:12px 20px; border:none; border-radius:10px; font-weight:bold; cursor:pointer; width:100%; font-size:16px; }
+.btn:hover { background:#16a34a; }
+.modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); justify-content:center; align-items:center; z-index:999; }
+.modal-content { background:#1e293b; padding:25px; border-radius:16px; width:90%; max-width:450px; border:1px solid #334155; }
+.modal-content h2 { color:#22c55e; margin-bottom:15px; }
+.wallet-box { background:#0f172a; padding:12px; border-radius:8px; word-break:break-all; margin:10px 0; border:1px dashed #22c55e; }
+  input { width:100%; padding:12px; margin:8px 0; border-radius:8px; border:1px solid #475569; background:#0f172a; color:#fff; font-size:15px; }
+.close-btn { background:#475569; color:#fff; margin-top:10px; }
+.loading { text-align:center; padding:40px; color:#94a3b8; }
+.no-results { text-align:center; padding:40px; color:#94a3b8; grid-column:1/-1; }
+</style>
+</head>
+<body>
+
+<h1>🔥 QKJ Digital Store</h1>
+<p class="subtitle">Instant PDF Download | Pay with USDT TRC20</p>
+
+<!-- NEW SEARCH BAR -->
+<div class="search-box">
+  <input type="text" id="searchInput" placeholder="🔍 Search products... e.g. WhatsApp, Marketing, Guide">
+</div>
+
+<div class="products" id="products">
+  <div class="loading">Loading products...</div>
+</div>
+
+<!-- Checkout Modal -->
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <h2>Complete Your Order</h2>
+    <p><b>1. Send $<span id="modalPrice"></span> USDT TRC20 to:</b></p>
+    <div class="wallet-box" id="wallet"></div>
+    <p><b>2. Enter your details below:</b></p>
+    <input type="email" id="email" placeholder="Your Email - We will send receipt">
+    <input type="text" id="tx" placeholder="Transaction Hash / TXID">
+    <button class="btn" onclick="submitOrder()">I Have Paid - Get Download</button>
+    <button class="btn close-btn" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<script>
+// ====== EDIT THESE 2 THINGS ONLY ======
+const SHEET_ID = '1NX3ifqBgikOTTl_zkjWnseOGH25vDdcdLhPDm1TmXiY';
+const USDT_WALLET = 'TYourRealUSDTWalletHere'; 
+// ======================================
+
+const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+let currentProduct = {};
+let allProducts = []; // Store all products for search
+
+async function loadProducts() {
+  try {
+    const res = await fetch(CSV_URL);
+    const text = await res.text();
+    const json = JSON.parse(text.substr(47).slice(0,-2));
+    const rows = json.table.rows;
+    
+    allProducts = [];
+    rows.forEach(row => {
+      if(row.c && row.c[5] && row.c[5].v === 'YES') {
+        allProducts.push({
+          name: row.c[0]?.v || '',
+          price: row.c[1]?.v || '0',
+          desc: row.c[2]?.v || '',
+          img: row.c[3]?.v || 'https://via.placeholder.com/300x220',
+          dl: row.c[4]?.v || '#'
+        });
+      }
+    });
+    
+    displayProducts(allProducts);
+    document.getElementById('wallet').innerText = USDT_WALLET;
+  } catch(e) {
+    document.getElementById('products').innerHTML = '<p class="loading">Error loading products. Make sure Sheet is "Anyone with link" Viewer</p>';
+  }
+}
+
+function displayProducts(products) {
+  if(products.length === 0) {
+    document.getElementById('products').innerHTML = '<div class="no-results">No products found 😔</div>';
+    return;
+  }
+  
+  let html = '';
+  products.forEach(p => {
+    html += `
+    <div class="card">
+      <img src="${p.img}" alt="${p.name}">
+      <h3>${p.name}</h3>
+      <p>${p.desc}</p>
+      <div class="price">$${p.price} USDT</div>
+      <button class="btn" onclick="openModal('${p.name}','${p.price}','${p.dl}')">Buy Now</button>
+    </div>`;
+  });
+  document.getElementById('products').innerHTML = html;
+}
+
+// NEW: SEARCH FUNCTION
+document.getElementById('searchInput').addEventListener('keyup', function() {
+  const searchTerm = this.value.toLowerCase();
+  const filtered = allProducts.filter(p => 
+    p.name.toLowerCase().includes(searchTerm) || 
+    p.desc.toLowerCase().includes(searchTerm)
+  );
+  displayProducts(filtered);
+});
+
+function openModal(name, price, dl) {
+  currentProduct = {name, price, dl};
+  document.getElementById('modalPrice').innerText = price;
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  document.getElementById('email').value = '';
+  document.getElementById('tx').value = '';
+}
+
+function submitOrder() {
+  const email = document.getElementById('email').value;
+  const tx = document.getElementById('tx').value;
+  if(!email ||!tx) { alert('Please enter email and TXID'); return; }
+  
+  alert(`Order Received!\n\nProduct: ${currentProduct.name}\nEmail: ${email}\nTXID: ${tx}\n\nClick OK to download your PDF`);
+  window.open(currentProduct.dl, '_blank');
+  closeModal();
+}
+
+window.onclick = function(event) {
+  if (event.target == document.getElementById('modal')) {
+    closeModal();
+  }
+}
+
+loadProducts();
+</script>
+
+</body>
+</html>
