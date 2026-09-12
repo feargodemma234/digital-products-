@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Digital Store</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{font-family:Arial; background:#f5f5f5; padding:20px; margin:0}
+    h1{text-align:center; color:#333}
+   .grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; max-width:1100px; margin:auto}
+   .card{background:white; padding:20px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1)}
+   .card img{width:100%; height:200px; object-fit:cover; border-radius:8px}
+   .price{font-size:26px; color:#00B894; font-weight:bold; margin:10px 0}
+    button{background:#00B894; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; width:100%; font-size:16px}
+   .modal{display:none; position:fixed; z-index:10; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); overflow:auto}
+   .modal-content{background:white; margin:5% auto; padding:30px; width:90%; max-width:500px; border-radius:12px}
+   .wallet{word-break:break-all; background:#f1f1f1; padding:10px; border-radius:5px; font-family:monospace; font-size:14px; border:2px dashed #00B894}
+    input{width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px}
+  </style>
+</head>
+<body>
+  <h1>My Digital Store</h1>
+  <div class="grid" id="products">Loading products...</div>
+
+  <!-- BUY POPUP -->
+  <div class="modal" id="buyModal">
+    <div class="modal-content">
+      <span onclick="closeModal()" style="float:right; cursor:pointer; font-size:24px">&times;</span>
+      <h3 id="pName"></h3>
+      <p id="pPrice"></p>
+      
+      <div style="background:#E8F5E9; padding:15px; border-radius:8px">
+        <h4>Pay with USDT TRC20</h4>
+        <p><b>IMPORTANT:</b> Only send USDT TRC20. Other coins will be lost.</p>
+        <div class="wallet">TRzfCcrUmc212VLEYNYVRKtSuYQSnaiU6T</div>
+        <input type="text" id="email" placeholder="Your Email - We send product here" required>
+        <input type="text" id="tx" placeholder="Paste TX Hash after payment" required>
+        <button onclick="submit('crypto')">I Have Paid</button>
+      </div>
+
+      <p style="text-align:center; margin-top:15px; font-size:12px">After payment, WhatsApp the TX screenshot for instant delivery</p>
+    </div>
+  </div>
+
+<script>
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/1NX3ifqBgikOTTl_zkjWnseOGH25vDdcdLhPDm1TmXiY/gviz/tq?tqx=out:csv"
+
+let currentProduct = {}
+
+fetch(SHEET_URL)
+.then(res => res.text())
+.then(csv => {
+  const rows = csv.split('\n').slice(1)
+  document.getElementById('products').innerHTML = rows.map(row => {
+    const [name, price, desc, img, dl, active] = row.split(',')
+    if(active !== 'YES' || !name) return ''
+    return `
+    <div class="card">
+      <img src="${img}">
+      <h3>${name}</h3>
+      <p>${desc}</p>
+      <div class="price">$${price} USD</div>
+      <button onclick='openModal("${name}", ${price}, "${dl}")'>Buy Now</button>
+    </div>`
+  }).join('') || "<p style='text-align:center'>No products yet. Add products to your Google Sheet with Active = YES</p>"
+})
+
+function openModal(name, price, link){
+  currentProduct = {name, price, link}
+  document.getElementById('pName').innerText = name
+  document.getElementById('pPrice').innerText = `$${price} USD`
+  document.getElementById('buyModal').style.display = 'block'
+}
+function closeModal(){document.getElementById('buyModal').style.display = 'none'}
+
+function submit(type){
+  const email = document.getElementById('email').value
+  const tx = document.getElementById('tx').value
+  if(!email || !tx){ alert("Please enter email and TX hash"); return }
+  alert("Order received! Send TX screenshot to WhatsApp for instant delivery")
+  closeModal()
+}
+</script>
+</body>
+</html>
